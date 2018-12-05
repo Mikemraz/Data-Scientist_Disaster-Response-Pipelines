@@ -1,24 +1,66 @@
 import sys
-
+import pandas as pd
+from sqlalchemy import create_engine
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
+import pickle
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
 
 def load_data(database_filepath):
-    pass
+	engine = create_engine('sqlite:///InsertDatabaseName.db')
+	df = pd.read_sql_table('InsertTableName',engine)
+	X = df.loc[:,'message']
+	Y = df.loc[:,'related':'direct_report']
+	categories = df.loc[:, 'related':'direct_report'].columns
+	return X,Y,categories
 
 
 def tokenize(text):
-    pass
+    tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
+    return clean_tokens
+
 
 
 def build_model():
-    pass
+	pipeline = Pipeline([('vect', CountVectorizer(tokenizer=tokenize)),
+                     ('tfidf',TfidfTransformer()),
+                     ('multiple_output_model',MultiOutputClassifier(DecisionTreeClassifier()))])  
+	parameters = [{'multiple_output_model__estimator__max_features': ['sqrt','log2',None], 
+				   'multiple_output_model__estimator__max_depth': [10, 30, 50]}]
+	cv = GridSearchCV(pipeline,parameters)
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+	for column in category_names:
+    loc = Y_test.columns.get_loc(column)
+    true = Y_test[column]
+    pred = Y_pred[:,loc]
+    print("For column {}'s classificaiton report:".format(column),'\n',classification_report(true,pred))
+    return None
 
 
 def save_model(model, model_filepath):
-    pass
+	filename = model_filepath
+	pickle.dump(model, open(filename, 'wb'))
+    return None
 
 
 def main():
