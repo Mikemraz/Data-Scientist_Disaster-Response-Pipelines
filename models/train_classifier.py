@@ -19,12 +19,12 @@ nltk.download('punkt')
 nltk.download('wordnet')
 
 def load_data(database_filepath):
-	engine = create_engine('sqlite:///InsertDatabaseName.db')
-	df = pd.read_sql_table('InsertTableName',engine)
-	X = df.loc[:,'message']
-	Y = df.loc[:,'related':'direct_report']
-	categories = df.loc[:, 'related':'direct_report'].columns
-	return X,Y,categories
+    engine = create_engine('sqlite:///{}'.format(database_filepath))
+    df = pd.read_sql_table('DisasterResponse',engine)
+    X = df.loc[:,'message']
+    Y = df.loc[:,'related':'direct_report']
+    categories = df.loc[:, 'related':'direct_report'].columns
+    return X,Y,categories
 
 
 def tokenize(text):
@@ -39,27 +39,28 @@ def tokenize(text):
 
 
 def build_model():
-	pipeline = Pipeline([('vect', CountVectorizer(tokenizer=tokenize)),
+    pipeline = Pipeline([('vect', CountVectorizer(tokenizer=tokenize)),
                      ('tfidf',TfidfTransformer()),
                      ('multiple_output_model',MultiOutputClassifier(DecisionTreeClassifier()))])  
-	parameters = [{'multiple_output_model__estimator__max_features': ['sqrt','log2',None], 
-				   'multiple_output_model__estimator__max_depth': [10, 30, 50]}]
-	cv = GridSearchCV(pipeline,parameters)
+    parameters = [{'multiple_output_model__estimator__max_features': ['sqrt','log2',None], 
+                   'multiple_output_model__estimator__max_depth': [10, 30, 50]}]
+    cv = GridSearchCV(pipeline,parameters)
     return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-	for column in category_names:
-    loc = Y_test.columns.get_loc(column)
-    true = Y_test[column]
-    pred = Y_pred[:,loc]
-    print("For column {}'s classificaiton report:".format(column),'\n',classification_report(true,pred))
+    Y_pred = model.predict(X_test)
+    for column in category_names:
+        loc = Y_test.columns.get_loc(column)
+        true = Y_test[column]
+        pred = Y_pred[:,loc]
+        print("For column {}'s classificaiton report:".format(column),'\n',classification_report(true,pred))
     return None
 
 
 def save_model(model, model_filepath):
-	filename = model_filepath
-	pickle.dump(model, open(filename, 'wb'))
+    filename = model_filepath
+    pickle.dump(model, open(filename, 'wb'))
     return None
 
 
