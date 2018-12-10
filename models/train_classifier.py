@@ -11,7 +11,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report,accuracy_score
 from sklearn.model_selection import GridSearchCV
 import pickle
 import nltk
@@ -19,6 +19,17 @@ nltk.download('punkt')
 nltk.download('wordnet')
 
 def load_data(database_filepath):
+    """load data from database.
+    
+    Args:
+        database_filepath: the file path database is stored.
+        
+    Returns:
+        X: features 
+        Y: labels
+        categories: the string of category names
+    
+    """
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('DisasterResponse',engine)
     X = df.loc[:,'message']
@@ -28,6 +39,11 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    """return tokens of given text.
+    
+    Args:
+        text: the text to be tokenized.
+    """
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
     clean_tokens = []
@@ -39,6 +55,7 @@ def tokenize(text):
 
 
 def build_model():
+    """Return a decision tree model that is pipelined with proprocessing and grid search for hypaparameters."""
     pipeline = Pipeline([('vect', CountVectorizer(tokenizer=tokenize)),
                      ('tfidf',TfidfTransformer()),
                      ('multiple_output_model',MultiOutputClassifier(DecisionTreeClassifier()))])  
@@ -49,16 +66,26 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """Evaluate the model on test set.
+    
+    Args:
+        model: trained model
+        X_test: test features
+        Y_test: test labels
+        category_names: names of categories in model output.
+    """
     Y_pred = model.predict(X_test)
     for column in category_names:
         loc = Y_test.columns.get_loc(column)
         true = Y_test[column]
         pred = Y_pred[:,loc]
         print("For column {}'s classificaiton report:".format(column),'\n',classification_report(true,pred))
+        print("Accuracy score is ", accuracy_score(true,pred))
     return None
 
 
 def save_model(model, model_filepath):
+    """save model as pickle file."""
     filename = model_filepath
     pickle.dump(model, open(filename, 'wb'))
     return None

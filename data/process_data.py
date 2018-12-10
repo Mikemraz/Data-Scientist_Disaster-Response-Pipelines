@@ -5,6 +5,15 @@ from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
+    """return merged dataframe of masseges and categories data.
+	
+	Args:
+	    massages_filepath: the file path of massages data
+		categories_filepath: the file path of categories data
+		
+	Returns:
+	    df: merged dataframe of given data
+	"""
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = messages.merge(categories,on='id')
@@ -12,28 +21,45 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(df):
-	# create a dataframe of the 36 individual category columns
+    """return a cleaned version of the loaded dataframe.
+	
+	Args:
+	    df: the dataframe to be cleaned
+		
+    Returns:
+	    df: cleaned dataframe
+	"""
+    # create a dataframe of the 36 individual category columns
     categories = df.categories.str.split(pat=';',expand=True)
-	# select the first row of the categories dataframe
+    # select the first row of the categories dataframe
     row = categories.iloc[0]
     category_colnames = row.apply(lambda x:x[:-2])
-	# rename the columns of `categories`
+    # rename the columns of `categories`
     categories.columns = category_colnames
     for column in categories:
         # set each value to be the last character of the string
         categories[column] = categories[column].str[-1]
-		# convert column from string to numeric
+        # convert column from string to numeric
         categories[column] = categories[column].astype(int)
-	# drop the original categories column from `df`
+    # drop the original categories column from `df`
     df = df.drop('categories',axis=1)
-	# concatenate the original dataframe with the new `categories` dataframe
+    # concatenate the original dataframe with the new `categories` dataframe
     df = pd.concat([df,categories],axis=1)
-	# drop duplicates
+    # drop duplicates
     df = df.drop_duplicates()
     return df
 
 
 def save_data(df, database_filename):
+    """save dataframe to database file.
+	
+	Args:
+	    df: the dataframe to be saved
+		database_filename: the file name of database
+		
+	Returns:
+	    None
+	"""
     engine = create_engine('sqlite:///{}'.format(database_filename))
     df.to_sql('DisasterResponse', engine, index=False)
     return None  
